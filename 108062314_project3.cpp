@@ -1,22 +1,47 @@
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <sstream>
 #include <array>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <cassert>
+
 
 struct Point {
 	int x, y;
+	Point() : Point(0, 0) {}
+	Point(float x, float y) : x(x), y(y) {}
+	bool operator==(const Point& rhs) const {
+		return x == rhs.x && y == rhs.y;
+	}
+	bool operator!=(const Point& rhs) const {
+		return !operator==(rhs);
+	}
+	Point operator+(const Point& rhs) const {
+		return Point(x + rhs.x, y + rhs.y);
+	}
+	Point operator-(const Point& rhs) const {
+		return Point(x - rhs.x, y - rhs.y);
+	}
 };
+
 
 int player;
 const int SIZE = 8;
+const int flip_value = 10;
 std::array<std::array<int, SIZE>, SIZE> board;
 std::vector<Point> next_valid_spots;
 std::array<std::array<int, SIZE>, SIZE> evval;
 std::vector<int> next_valid_spots_value;
 std::array<std::array<int, SIZE>, SIZE> statenow;
 std::vector<Point> high_value_spots;
+const std::array<Point, 8> directions{ {
+		Point(-1, -1), Point(-1, 0), Point(-1, 1),
+		Point(0, -1), /*{0, 0}, */Point(0, 1),
+		Point(1, -1), Point(1, 0), Point(1, 1)
+	} };
 void init() {
 	evval[0][0] = 90;
 	evval[0][1] = -60;
@@ -84,7 +109,62 @@ void init() {
 	evval[7][7] = 90;
 }
 
+std::vector<Point> count_valid_spots(std::array<std::array<int, SIZE>, SIZE> board, int player) {
+	std::vector<Point> result;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (board[i][j] == 0) {
+				Point p(i, j);
+				for (int k = 0; k < 8; k++) {
+					Point tmp = p + directions[k];
+					int flag = 0;//the first spots near is different color or not
+					while (board[tmp.x][tmp.y] == 3-player && (tmp.x != 7 || tmp.y != 7)) {
+						tmp = tmp + directions[k];
+						flag = 1;
+					}
+					if (board[tmp.x][tmp.y] == player && flag == 1) {
+						result.push_back(p);
+					}
+				}
+			}
+		}
+	}
+	return result;
+}
 
+int alpha_search(std::array<std::array<int, SIZE>, SIZE> board, Point p, int player) {
+	int value = evval[p.x][p.y];
+	//count how many discs will be flipped after this
+	for (int i = 0; i < 8; i++) {
+		int count = 0;
+		Point tmp = p + directions[i];
+		while (board[tmp.x][tmp.y] == 3-player&&(tmp.x!=7||tmp.y!=7)) {
+			count++;
+			tmp = tmp + directions[i];
+		}
+		if (board[tmp.x][tmp.y] == player) {
+			value += count * flip_value;
+		}
+	}
+}
+
+std::array<std::array<int, SIZE>, SIZE> flip_board(std::array<std::array<int, SIZE>, SIZE> board, Point p, int player) {
+	std::array<std::array<int, SIZE>, SIZE> newboard = board;
+	for (int i = 0; i < 8; i++) {
+		std::vector<Point> to_flip;
+		Point tmp = p + directions[i];
+		while (board[tmp.x][tmp.y] == 3 - player && (tmp.x != 7 || tmp.y != 7)) {
+			tmp = tmp + directions[i];
+			to_flip.push_back(Point(tmp.x, tmp.y));
+		}
+		if (board[tmp.x][tmp.y] == player) {
+			for (auto c : to_flip) {
+				newboard[c.x][c.y] = player;
+			}
+		}
+	}
+	return newboard;
+}
 
 void read_board(std::ifstream& fin) {
 	fin >> player;
