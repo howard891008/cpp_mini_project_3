@@ -31,7 +31,7 @@ struct Point {
 int player;
 const int SIZE = 8;
 const int flip_value = 10;
-const int mobility_vallue = 10;
+const int mobility_value = 15;
 std::array<std::array<int, SIZE>, SIZE> board;
 std::vector<Point> next_valid_spots;
 std::array<std::array<int, SIZE>, SIZE> evval;
@@ -134,6 +134,7 @@ std::vector<Point> count_valid_spots(std::array<std::array<int, SIZE>, SIZE> boa
 						continue;
 					if (board[tmp.x][tmp.y] == player && flag == 1) {
 						result.push_back(p);
+						break;
 					}
 				}
 			}
@@ -150,12 +151,12 @@ std::array<std::array<int, SIZE>, SIZE> flip_board(std::array<std::array<int, SI
 		Point tmp = p + directions[i];
 		if (tmp.x <= 7 && tmp.y <= 7 && tmp.x >= 0 && tmp.y >= 0) {
 			while (board[tmp.x][tmp.y] == 3 - player) {
+				to_flip.push_back(Point(tmp.x, tmp.y));
 				tmp = tmp + directions[i];
 				if (tmp.x > 7 || tmp.y > 7 || tmp.x < 0 || tmp.y < 0) {
 					tmp = tmp - directions[i];
 					break;
 				}
-				to_flip.push_back(Point(tmp.x, tmp.y));
 			}
 		}
 		if (tmp.x > 7 || tmp.y > 7 || tmp.x < 0 || tmp.y < 0)
@@ -200,15 +201,18 @@ int state_value(std::array<std::array<int, SIZE>, SIZE> board, int player) {
 				value -= spot_value[i][j];
 		}
 	}
-	std::vector<Point> valid_spots = count_valid_spots(board, 3 - player);
+	std::vector<Point> enemy_valid_spots = count_valid_spots(board, 3 - player);
+	int enemy_mobility = enemy_valid_spots.size();
+	value -= enemy_mobility * mobility_value;
+	std::vector<Point> valid_spots = count_valid_spots(board, player);
 	int mobility = valid_spots.size();
-	value -= mobility * mobility_vallue;
+	value += mobility * mobility_value;
 	return value;
 }
 //minimax search and alpha-beta pruning
 int search(std::array<std::array<int, SIZE>, SIZE> board, int dist, int alpha, int beta, int last, bool maximize) {
 	std::vector<Point> child_spots = count_valid_spots(board, 3-last);
-	if (dist >= 3||child_spots.size()==0)
+	if (dist >= 4||child_spots.size()==0)
 		return state_value(board, player);
 	if (maximize) {
 		for (auto c : child_spots) {
@@ -229,6 +233,7 @@ int search(std::array<std::array<int, SIZE>, SIZE> board, int dist, int alpha, i
 		return beta;
 	}
 }
+//return the number of stable discs on side
 void read_board(std::ifstream& fin) {
 	fin >> player;
 	for (int i = 0; i < SIZE; i++) {
