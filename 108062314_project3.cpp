@@ -212,25 +212,29 @@ int state_value(std::array<std::array<int, SIZE>, SIZE> board, int player) {
 //minimax search and alpha-beta pruning
 int search(std::array<std::array<int, SIZE>, SIZE> board, int dist, int alpha, int beta, int last, bool maximize) {
 	std::vector<Point> child_spots = count_valid_spots(board, 3-last);
-	if (dist >= 4||child_spots.size()==0)
+	if (dist >= 3||child_spots.size()==0)
 		return state_value(board, player);
 	if (maximize) {
+		int v = INT_MIN;
 		for (auto c : child_spots) {
 			std::array<std::array<int, SIZE>, SIZE> newboard = flip_board(board, c, 3-last);
-			alpha = std::max(alpha, search(newboard, dist + 1, alpha, beta, 3-last, false));
+			v = std::max(v, search(newboard, dist + 1, alpha, beta, 3-last, false));
+			alpha = std::max(alpha, v);
 			if (beta <= alpha)
 				break;
 		}
-		return alpha;
+		return v;
 	}
 	else {
+		int v = INT_MAX;
 		for (auto c : child_spots) {
 			std::array<std::array<int, SIZE>, SIZE> newboard = flip_board(board, c, 3-last);
-			beta = std::min(beta, search(newboard, dist + 1, alpha, beta, 3-last, true));
+			v = std::min(v, search(newboard, dist + 1, alpha, beta, 3-last, true));
+			beta = std::min(beta, v);
 			if (beta <= alpha)
 				break;
 		}
-		return beta;
+		return v;
 	}
 }
 //return the number of stable discs on side
